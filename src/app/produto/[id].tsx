@@ -3,116 +3,137 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { PRATOS } from '../../data/mockPratos';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, RADIUS, SPACING } from '../../constants/theme';
+import { useCart } from '../../context/CartContext';
+import { PRATOS } from '../../data/mockPratos';
 
-export default function ProdutoDetalhesScreen() {
+export default function ProdutoDetalheScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { id } = useLocalSearchParams();
-  const [quantidade, setQuantidade] = useState(1);
+  const { adicionarAoCarrinho } = useCart();
 
-  // Busca o prato correspondente pelo ID da rota
-  const prato = PRATOS.find((p) => p.id === id);
+  const prato = PRATOS.find((item) => item.id === id);
+
+  const [quantidade, setQuantidade] = useState(1);
+  const [observacao, setObservacao] = useState('');
 
   if (!prato) {
     return (
-      <SafeAreaView style={styles.containerVazio}>
-        <Ionicons name="alert-circle-outline" size={64} color={COLORS.textSecondary} />
-        <Text style={styles.textoVazio}>Produto não encontrado.</Text>
-        <TouchableOpacity style={styles.voltarButton} onPress={() => router.back()}>
-          <Text style={styles.voltarButtonText}>Voltar</Text>
-        </TouchableOpacity>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.erroContainer}>
+          <Text style={styles.erroTexto}>Prato não encontrado.</Text>
+          <TouchableOpacity onPress={() => router.back()} style={styles.voltarBtn}>
+            <Text style={styles.voltarBtnTexto}>Voltar</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
 
-  const precoTotal = prato.preco * quantidade;
+  const aumentarQtd = () => setQuantidade((prev) => prev + 1);
+  const diminuirQtd = () => setQuantidade((prev) => (prev > 1 ? prev - 1 : 1));
 
-  const handleAdicionarCarrinho = () => {
-    // Aqui no futuro podemos salvar no estado global/AsyncStorage do carrinho
-    router.back();
+  const total = (prato.preco * quantidade).toFixed(2).replace('.', ',');
+
+  const handleAdicionar = () => {
+    adicionarAoCarrinho(
+      {
+        id: prato.id,
+        nome: prato.nome,
+        preco: prato.preco,
+        restaurante: prato.restaurante,
+        imagem: prato.imagem,
+      },
+      quantidade
+    );
+
+    router.push('/carrinho');
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      {/* Botão Voltar Flutuante */}
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.back()}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+      </TouchableOpacity>
+
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Imagem de Capa e Botão de Voltar Flutuante */}
-        <View style={styles.imagemContainer}>
-          <Image source={{ uri: prato.imagem }} style={styles.imagem} />
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="arrow-back" size={20} color={COLORS.text} />
-          </TouchableOpacity>
-        </View>
+        {/* Imagem do Produto */}
+        <Image source={{ uri: prato.imagem }} style={styles.imagem} />
 
-        {/* Informações do Produto */}
+        {/* Informações Principais */}
         <View style={styles.conteudo}>
-          <Text style={styles.nome}>{prato.nome}</Text>
-          <Text style={styles.restaurante}>{prato.restaurante}</Text>
-
-          <View style={styles.detalhesRow}>
-            <View style={styles.avaliacaoBox}>
-              <Ionicons name="star" size={14} color={COLORS.warning} />
-              <Text style={styles.avaliacaoTexto}>{prato.avaliacao}</Text>
-            </View>
-            <Text style={styles.ponto}>•</Text>
-            <Text style={styles.tempoTexto}>{prato.tempoEntrega}</Text>
-            <Text style={styles.ponto}>•</Text>
-            <Text style={styles.freteTexto}>{prato.frete}</Text>
+          <View style={styles.restauranteBadge}>
+            <Ionicons name="storefront-outline" size={14} color={COLORS.primary} />
+            <Text style={styles.restauranteTexto}>{prato.restaurante}</Text>
           </View>
 
+          <Text style={styles.nome}>{prato.nome}</Text>
           <Text style={styles.descricao}>{prato.descricao}</Text>
+
+          <Text style={styles.precoUnitario}>
+            R$ {prato.preco.toFixed(2).replace('.', ',')}
+          </Text>
 
           <View style={styles.divisor} />
 
-          {/* Observações ou Complementos */}
-          <View style={styles.secaoObs}>
-            <Text style={styles.secaoTitulo}>Alguma observação?</Text>
-            <Text style={styles.secaoSub}>Ex: sem cebola, ponto da carne, etc.</Text>
-            <View style={styles.obsInputBox}>
-              <Text style={styles.obsPlaceholder}>Adicionar observação (opcional)</Text>
+          {/* Informações de Entrega */}
+          <View style={styles.infoEntrega}>
+            <View style={styles.infoItem}>
+              <Ionicons name="time-outline" size={18} color={COLORS.textSecondary} />
+              <Text style={styles.infoTexto}>{prato.tempoEntrega || '30-45 min'}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Ionicons name="star" size={18} color="#FFB800" />
+              <Text style={styles.infoTexto}>{prato.avaliacao || '4.8'}</Text>
             </View>
           </View>
         </View>
       </ScrollView>
 
-      {/* Rodapé Fixo com Quantidade e Botão de Adicionar */}
+      {/* Rodapé Fixo com Controle de Quantidade e Botão Adicionar */}
       <View style={styles.footer}>
         <View style={styles.quantidadeContainer}>
           <TouchableOpacity
-            style={[styles.qtdButton, quantidade <= 1 && styles.qtdButtonDisabled]}
-            disabled={quantidade <= 1}
-            onPress={() => setQuantidade(q => Math.max(1, q - 1))}
+            onPress={diminuirQtd}
+            style={[styles.qtdBotao, quantidade === 1 && styles.qtdBotaoDesabilitado]}
+            disabled={quantidade === 1}
           >
-            <Ionicons name="remove" size={18} color={quantidade <= 1 ? COLORS.border : COLORS.text} />
+            <Ionicons
+              name="remove"
+              size={20}
+              color={quantidade === 1 ? COLORS.textSecondary : COLORS.primary}
+            />
           </TouchableOpacity>
-          <Text style={styles.qtdTexto}>{quantidade}</Text>
-          <TouchableOpacity
-            style={styles.qtdButton}
-            onPress={() => setQuantidade(q => q + 1)}
-          >
-            <Ionicons name="add" size={18} color={COLORS.text} />
+
+          <Text style={styles.quantidadeTexto}>{quantidade}</Text>
+
+          <TouchableOpacity onPress={aumentarQtd} style={styles.qtdBotao}>
+            <Ionicons name="add" size={20} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.botaoAdicionar} onPress={handleAdicionarCarrinho} activeOpacity={0.9}>
-          <Text style={styles.botaoAdicionarTexto}>Adicionar</Text>
-          <Text style={styles.botaoAdicionarPreco}>
-            R$ {precoTotal.toFixed(2).replace('.', ',')}
-          </Text>
+        <TouchableOpacity
+          style={styles.adicionarBotao}
+          onPress={handleAdicionar}
+          activeOpacity={0.9}
+        >
+          <Text style={styles.adicionarTexto}>Adicionar</Text>
+          <Text style={styles.adicionarTotal}>R$ {total}</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -121,135 +142,102 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  containerVazio: {
+  erroContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
     gap: SPACING.md,
   },
-  textoVazio: {
+  erroTexto: {
     fontSize: 16,
+    color: COLORS.textSecondary,
+  },
+  voltarBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
+  },
+  voltarBtnTexto: {
+    color: COLORS.white,
     fontWeight: '700',
-    color: COLORS.text,
-  },
-  voltarButton: {
-  backgroundColor: COLORS.primary,
-  paddingHorizontal: SPACING.lg,
-  paddingVertical: SPACING.sm,
-  borderRadius: RADIUS.md,
-},
-voltarButtonText: {
-  color: COLORS.white,
-  fontWeight: '700',
-},
-  imagemContainer: {
-    width: '100%',
-    height: 260,
-    backgroundColor: COLORS.surface,
-    position: 'relative',
-  },
-  imagem: {
-    width: '100%',
-    height: '100%',
   },
   backButton: {
     position: 'absolute',
-    top: 50,
+    top: 48,
     left: SPACING.md,
-    backgroundColor: COLORS.white,
-    width: 36,
-    height: 36,
+    zIndex: 10,
+    width: 40,
+    height: 40,
     borderRadius: RADIUS.full,
+    backgroundColor: COLORS.white,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 4,
+  },
+  imagem: {
+    width: '100%',
+    height: 260,
+    backgroundColor: COLORS.surface,
   },
   conteudo: {
     padding: SPACING.md,
-    backgroundColor: COLORS.background,
-    borderTopLeftRadius: RADIUS.lg,
-    borderTopRightRadius: RADIUS.lg,
-    marginTop: -20,
+    gap: SPACING.sm,
+  },
+  restauranteBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+  },
+  restauranteTexto: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
   nome: {
     fontSize: 22,
     fontWeight: '800',
     color: COLORS.text,
-    marginBottom: 4,
-  },
-  restaurante: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.sm,
-  },
-  detalhesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
-  avaliacaoBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  avaliacaoTexto: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  ponto: {
-    marginHorizontal: 8,
-    color: COLORS.textSecondary,
-  },
-  tempoTexto: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-  },
-  freteTexto: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
+    marginTop: 4,
   },
   descricao: {
     fontSize: 14,
     color: COLORS.textSecondary,
     lineHeight: 20,
-    marginBottom: SPACING.md,
+  },
+  precoUnitario: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginTop: 4,
   },
   divisor: {
     height: 1,
     backgroundColor: COLORS.border,
-    marginVertical: SPACING.md,
+    marginVertical: SPACING.sm,
   },
-  secaoObs: {
-    gap: 4,
-    marginBottom: SPACING.xl,
+  infoEntrega: {
+    flexDirection: 'row',
+    gap: SPACING.lg,
   },
-  secaoTitulo: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.text,
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  secaoSub: {
-    fontSize: 12,
+  infoTexto: {
+    fontSize: 13,
     color: COLORS.textSecondary,
-    marginBottom: SPACING.sm,
-  },
-  obsInputBox: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-  },
-  obsPlaceholder: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
@@ -266,39 +254,41 @@ voltarButtonText: {
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.md,
-    overflow: 'hidden',
+    paddingHorizontal: 8,
+    height: 48,
+    gap: 12,
   },
-  qtdButton: {
-    padding: 10,
-    backgroundColor: COLORS.surface,
+  qtdBotao: {
+    padding: 4,
   },
-  qtdButtonDisabled: {
-    opacity: 0.5,
+  qtdBotaoDesabilitado: {
+    opacity: 0.4,
   },
-  qtdTexto: {
-    paddingHorizontal: 16,
-    fontSize: 15,
+  quantidadeTexto: {
+    fontSize: 16,
     fontWeight: '700',
     color: COLORS.text,
+    minWidth: 20,
+    textAlign: 'center',
   },
-  botaoAdicionar: {
+  adicionarBotao: {
     flex: 1,
     flexDirection: 'row',
     backgroundColor: COLORS.primary,
+    height: 48,
     borderRadius: RADIUS.md,
-    paddingVertical: 14,
-    paddingHorizontal: SPACING.md,
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
   },
-  botaoAdicionarTexto: {
+  adicionarTexto: {
+    color: COLORS.white,
     fontSize: 15,
     fontWeight: '700',
-    color: COLORS.white,
   },
-  botaoAdicionarPreco: {
+  adicionarTotal: {
+    color: COLORS.white,
     fontSize: 15,
     fontWeight: '800',
-    color: COLORS.white,
   },
 });
