@@ -10,8 +10,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, RADIUS, SPACING } from '../constants/theme';
-import { useCart } from '../context/CartContext';
+import { COLORS, RADIUS, SPACING } from '../../constants/theme';
+import { useCart } from '../../context/CartContext';
 
 export default function CarrinhoScreen() {
   const router = useRouter();
