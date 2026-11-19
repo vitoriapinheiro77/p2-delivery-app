@@ -1,48 +1,79 @@
-import React, { createContext, useContext, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
-export interface ItemCarrinho {
+export type ItemCarrinho = {
   id: string;
   nome: string;
   preco: number;
-  quantidade: number;
   restaurante: string;
   imagem?: string;
-}
+  quantidade: number;
+};
 
-interface CartContextData {
+type CartContextData = {
   itens: ItemCarrinho[];
-  adicionarAoCarrinho: (item: Omit<ItemCarrinho, 'quantidade'>, quantidade?: number) => void;
+  adicionarAoCarrinho: (produto: Omit<ItemCarrinho, 'quantidade'>, quantidade: number) => void;
   removerDoCarrinho: (id: string) => void;
   alterarQuantidade: (id: string, delta: number) => void;
   limparCarrinho: () => void;
   subtotal: number;
-  totalItens: number;
-}
+};
+
+const CART_STORAGE_KEY = '@delivery_app_cart';
 
 const CartContext = createContext<CartContextData>({} as CartContextData);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [itens, setItens] = useState<ItemCarrinho[]>([]);
 
-  const adicionarAoCarrinho = (produto: Omit<ItemCarrinho, 'quantidade'>, quantidade = 1) => {
-    setItens((prev) => {
-      const indexExistente = prev.findIndex((i) => i.id === produto.id);
-      if (indexExistente >= 0) {
-        const novaLista = [...prev];
-        novaLista[indexExistente].quantidade += quantidade;
-        return novaLista;
+  // Carrega os itens salvos ao iniciar o app
+  useEffect(() => {
+    async function carregarCarrinho() {
+      try {
+        const dadosSalvos = await AsyncStorage.getItem(CART_STORAGE_KEY);
+        if (dadosSalvos) {
+          setItens(JSON.parse(dadosSalvos));
+        }
+      } catch (error) {
+        console.error('Erro ao carregar o carrinho do AsyncStorage:', error);
       }
-      return [...prev, { ...produto, quantidade }];
+    }
+    carregarCarrinho();
+  }, []);
+
+  // Salva os itens no AsyncStorage sempre que a lista mudar
+  useEffect(() => {
+    async function salvarCarrinho() {
+      try {
+        await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(itens));
+      } catch (error) {
+        console.error('Erro ao salvar o carrinho no AsyncStorage:', error);
+      }
+    }
+    salvarCarrinho();
+  }, [itens]);
+
+  const adicionarAoCarrinho = (produto: Omit<ItemCarrinho, 'quantidade'>, quantidade: number) => {
+    setItens((prevItens) => {
+      const indexExistente = prevItens.findIndex((item) => item.id === produto.id);
+
+      if (indexExistente >= 0) {
+        const novosItens = [...prevItens];
+        novosItens[indexExistente].quantidade += quantidade;
+        return novosItens;
+      } else {
+        return [...prevItens, { ...produto, quantidade }];
+      }
     });
   };
 
   const removerDoCarrinho = (id: string) => {
-    setItens((prev) => prev.filter((item) => item.id !== id));
+    setItens((prevItens) => prevItens.filter((item) => item.id !== id));
   };
 
   const alterarQuantidade = (id: string, delta: number) => {
-    setItens((prev) =>
-      prev
+    setItens((prevItens) =>
+      prevItens
         .map((item) => {
           if (item.id === id) {
             const novaQtd = item.quantidade + delta;
@@ -59,7 +90,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const subtotal = itens.reduce((acc, item) => acc + item.preco * item.quantidade, 0);
-  const totalItens = itens.reduce((acc, item) => acc + item.quantidade, 0);
 
   return (
     <CartContext.Provider
@@ -70,7 +100,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         alterarQuantidade,
         limparCarrinho,
         subtotal,
-        totalItens,
       }}
     >
       {children}
@@ -79,5 +108,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useCart() {
-  return useContext(CartContext);
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error('useCart deve ser usado dentro de um CartProvider');
+  }
+  return context;
 }
