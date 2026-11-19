@@ -1,136 +1,127 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import {
   FlatList,
-  SafeAreaView,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, RADIUS, SPACING } from '../constants/theme';
-
-interface ItemCarrinho {
-  id: string;
-  nome: string;
-  preco: number;
-  quantidade: number;
-  restaurante: string;
-}
+import { useCart } from '../context/CartContext';
 
 export default function CarrinhoScreen() {
   const router = useRouter();
-  
-  // Mock temporário de itens no carrinho (depois podemos integrar com estado global)
-  const [itens, setItens] = useState<ItemCarrinho[]>([
-    {
-      id: '1',
-      nome: 'Smash Burger Duplo Bacon',
-      preco: 34.90,
-      quantidade: 1,
-      restaurante: 'Burger Kingo Artesanal',
-    },
-    {
-      id: '2',
-      nome: 'Batata Frita Rústica com Cheddar',
-      preco: 18.00,
-      quantidade: 1,
-      restaurante: 'Burger Kingo Artesanal',
-    },
-  ]);
+  const { itens, alterarQuantidade, removerDoCarrinho, subtotal, limparCarrinho } = useCart();
 
-  const subtotal = itens.reduce((acc, item) => acc + item.preco * item.quantidade, 0);
-  const taxaEntrega = 5.90;
-  const total = subtotal + (itens.length > 0 ? taxaEntrega : 0);
+  const taxaEntrega = itens.length > 0 ? 5.90 : 0;
+  const totalGeral = subtotal + taxaEntrega;
 
-  const alterarQtd = (id: string, delta: number) => {
-    setItens((prev) =>
-      prev
-        .map((item) => {
-          if (item.id === id) {
-            const novaQtd = item.quantidade + delta;
-            return novaQtd > 0 ? { ...item, quantidade: novaQtd } : null;
-          }
-          return item;
-        })
-        .filter(Boolean) as ItemCarrinho[]
+  if (itens.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Sacola</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <View style={styles.vazioContainer}>
+          <Ionicons name="basket-outline" size={80} color={COLORS.textSecondary} />
+          <Text style={styles.vazioTitulo}>Sua sacola está vazia</Text>
+          <Text style={styles.vazioSub}>Explore o cardápio e adicione pratos deliciosos!</Text>
+          <TouchableOpacity
+            style={styles.explorarBotao}
+            onPress={() => router.push('/(tabs)')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.explorarTexto}>Ver Cardápio</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
-  };
-
-  const handleFinalizarPedido = () => {
-    alert('Pedido realizado com sucesso! Acompanhe na aba Pedidos.');
-    router.replace('/(tabs)/pedidos');
-  };
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Cabeçalho */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+          <Ionicons name="arrow-back" size={22} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.tituloHeader}>Seu Carrinho</Text>
-        <View style={{ width: 36 }} />
+        <Text style={styles.headerTitle}>Sacola</Text>
+        <TouchableOpacity onPress={limparCarrinho}>
+          <Text style={styles.limparTexto}>Limpar</Text>
+        </TouchableOpacity>
       </View>
 
-      {itens.length === 0 ? (
-        <View style={styles.vazioContainer}>
-          <Ionicons name="cart-outline" size={64} color={COLORS.border} />
-          <Text style={styles.vazioTitulo}>Seu carrinho está vazio</Text>
-          <Text style={styles.vazioSub}>Explore o cardápio e adicione delícias!</Text>
-          <TouchableOpacity style={styles.voltarHomeButton} onPress={() => router.back()}>
-            <Text style={styles.voltarHomeText}>Ver cardápio</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <>
-          <FlatList
-            data={itens}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listaContainer}
-            renderItem={({ item }) => (
-              <View style={styles.cardItem}>
-                <View style={styles.infoItem}>
-                  <Text style={styles.nomeItem} numberOfLines={1}>{item.nome}</Text>
-                  <Text style={styles.restauranteItem}>{item.restaurante}</Text>
-                  <Text style={styles.precoItem}>R$ {(item.preco * item.quantidade).toFixed(2).replace('.', ',')}</Text>
-                </View>
-
-                <View style={styles.qtdContainer}>
-                  <TouchableOpacity onPress={() => alterarQtd(item.id, -1)} style={styles.qtdBtn}>
-                    <Ionicons name="remove" size={14} color={COLORS.text} />
-                  </TouchableOpacity>
-                  <Text style={styles.qtdValor}>{item.quantidade}</Text>
-                  <TouchableOpacity onPress={() => alterarQtd(item.id, 1)} style={styles.qtdBtn}>
-                    <Ionicons name="add" size={14} color={COLORS.text} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          />
-
-          {/* Resumo de Valores e Checkout */}
-          <View style={styles.footer}>
-            <View style={styles.resumoLinha}>
-              <Text style={styles.resumoLabel}>Subtotal</Text>
-              <Text style={styles.resumoValor}>R$ {subtotal.toFixed(2).replace('.', ',')}</Text>
-            </View>
-            <View style={styles.resumoLinha}>
-              <Text style={styles.resumoLabel}>Taxa de entrega</Text>
-              <Text style={styles.resumoValor}>R$ {taxaEntrega.toFixed(2).replace('.', ',')}</Text>
-            </View>
-            <View style={[styles.resumoLinha, styles.totalLinha]}>
-              <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalValor}>R$ {total.toFixed(2).replace('.', ',')}</Text>
+      {/* Lista de Itens */}
+      <FlatList
+        data={itens}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listaContainer}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }) => (
+          <View style={styles.itemCard}>
+            {item.imagem && <Image source={{ uri: item.imagem }} style={styles.itemImagem} />}
+            
+            <View style={styles.itemInfo}>
+              <Text style={styles.itemRestaurante}>{item.restaurante}</Text>
+              <Text style={styles.itemNome} numberOfLines={1}>{item.nome}</Text>
+              <Text style={styles.itemPreco}>
+                R$ {(item.preco * item.quantidade).toFixed(2).replace('.', ',')}
+              </Text>
             </View>
 
-            <TouchableOpacity style={styles.checkoutButton} onPress={handleFinalizarPedido} activeOpacity={0.9}>
-              <Text style={styles.checkoutText}>Fazer pedido</Text>
-            </TouchableOpacity>
+            <View style={styles.itemControles}>
+              <TouchableOpacity
+                onPress={() => alterarQuantidade(item.id, -1)}
+                style={styles.controleBotao}
+              >
+                <Ionicons name="remove" size={16} color={COLORS.primary} />
+              </TouchableOpacity>
+              
+              <Text style={styles.itemQtd}>{item.quantidade}</Text>
+
+              <TouchableOpacity
+                onPress={() => alterarQuantidade(item.id, 1)}
+                style={styles.controleBotao}
+              >
+                <Ionicons name="add" size={16} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
           </View>
-        </>
-      )}
+        )}
+      />
+
+      {/* Rodapé com Resumo de Valores e Botão de Pagamento */}
+      <View style={styles.footer}>
+        <View style={styles.resumoLinha}>
+          <Text style={styles.resumoTexto}>Subtotal</Text>
+          <Text style={styles.resumoValor}>R$ {subtotal.toFixed(2).replace('.', ',')}</Text>
+        </View>
+        <View style={styles.resumoLinha}>
+          <Text style={styles.resumoTexto}>Taxa de entrega</Text>
+          <Text style={styles.resumoValor}>R$ {taxaEntrega.toFixed(2).replace('.', ',')}</Text>
+        </View>
+        <View style={[styles.resumoLinha, styles.totalLinha]}>
+          <Text style={styles.totalTexto}>Total</Text>
+          <Text style={styles.totalValor}>R$ {totalGeral.toFixed(2).replace('.', ',')}</Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.pagarBotao}
+          onPress={() => router.push('/pagamento')}
+          activeOpacity={0.9}
+        >
+          <Text style={styles.pagarBotaoTexto}>Escolher forma de pagamento</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -145,89 +136,129 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
+    paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.white,
   },
   backButton: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
-  tituloHeader: {
+  headerTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: COLORS.text,
+  },
+  limparTexto: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  vazioContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.lg,
+    gap: SPACING.md,
+  },
+  vazioTitulo: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  vazioSub: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
+  explorarBotao: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    marginTop: SPACING.sm,
+  },
+  explorarTexto: {
+    color: COLORS.white,
+    fontWeight: '700',
+    fontSize: 15,
   },
   listaContainer: {
     padding: SPACING.md,
     gap: SPACING.md,
   },
-  cardItem: {
+  itemCard: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.white,
     borderRadius: RADIUS.md,
+    padding: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: SPACING.md,
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: SPACING.sm,
   },
-  infoItem: {
+  itemImagem: {
+    width: 60,
+    height: 60,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surface,
+  },
+  itemInfo: {
     flex: 1,
     gap: 2,
-    marginRight: SPACING.md,
   },
-  nomeItem: {
-    fontSize: 15,
+  itemRestaurante: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  itemNome: {
+    fontSize: 14,
     fontWeight: '700',
     color: COLORS.text,
   },
-  restauranteItem: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginBottom: 4,
-  },
-  precoItem: {
+  itemPreco: {
     fontSize: 14,
     fontWeight: '800',
     color: COLORS.primary,
+    marginTop: 4,
   },
-  qtdContainer: {
+  itemControles: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.sm,
-    overflow: 'hidden',
+    paddingHorizontal: 4,
+    height: 32,
+    gap: 8,
   },
-  qtdBtn: {
-    padding: 8,
-    backgroundColor: COLORS.surface,
+  controleBotao: {
+    padding: 2,
   },
-  qtdValor: {
-    paddingHorizontal: 12,
+  itemQtd: {
     fontSize: 14,
     fontWeight: '700',
     color: COLORS.text,
+    minWidth: 16,
+    textAlign: 'center',
   },
   footer: {
     backgroundColor: COLORS.white,
     padding: SPACING.md,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    gap: SPACING.sm,
+    gap: 8,
   },
   resumoLinha: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  resumoLabel: {
+  resumoTexto: {
     fontSize: 14,
     color: COLORS.textSecondary,
   },
@@ -239,10 +270,10 @@ const styles = StyleSheet.create({
   totalLinha: {
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    paddingTop: SPACING.xs,
+    paddingTop: 8,
     marginTop: 4,
   },
-  totalLabel: {
+  totalTexto: {
     fontSize: 16,
     fontWeight: '800',
     color: COLORS.text,
@@ -252,44 +283,17 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.primary,
   },
-  checkoutButton: {
+  pagarBotao: {
     backgroundColor: COLORS.primary,
+    height: 48,
     borderRadius: RADIUS.md,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: SPACING.sm,
-  },
-  checkoutText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.white,
-  },
-  vazioContainer: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: SPACING.xl,
-    gap: SPACING.sm,
+    marginTop: SPACING.sm,
   },
-  vazioTitulo: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  vazioSub: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginBottom: SPACING.md,
-  },
-  voltarHomeButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.md,
-  },
-  voltarHomeText: {
+  pagarBotaoTexto: {
     color: COLORS.white,
+    fontSize: 15,
     fontWeight: '700',
   },
 });
