@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -20,8 +21,14 @@ export default function PagamentoScreen() {
   const { itens, subtotal, limparCarrinho } = useCart();
   const [metodoSelecionado, setMetodoSelecionado] = useState<MetodoPagamento>('pix');
 
-  const taxaEntrega = itens.length > 0 ? 5.9 : 0;
-  const totalGeral = subtotal + taxaEntrega;
+  // Estados para Cupom de Desconto
+  const [codigoCupom, setCodigoCupom] = useState('');
+  const [cupomAplicado, setCupomAplicado] = useState<string | null>(null);
+  const [desconto, setDesconto] = useState(0);
+
+  const taxaEntregaBase = itens.length > 0 ? 5.9 : 0;
+  const taxaEntrega = cupomAplicado === 'FRETEGRATIS' ? 0 : taxaEntregaBase;
+  const totalGeral = Math.max(0, subtotal + taxaEntrega - desconto);
 
   const opcoesPagamento = [
     {
@@ -43,6 +50,37 @@ export default function PagamentoScreen() {
       icone: 'cash-outline' as const,
     },
   ];
+
+  const handleAplicarCupom = () => {
+    const codigo = codigoCupom.trim().toUpperCase();
+
+    if (!codigo) {
+      Alert.alert('Atenção', 'Digite um código de cupom válido.');
+      return;
+    }
+
+    if (codigo === 'PRIMEIRA15') {
+      setCupomAplicado(codigo);
+      setDesconto(15);
+      Alert.alert('Cupom aplicado!', 'Você ganhou R$ 15,00 de desconto.');
+    } else if (codigo === 'BURGER10') {
+      setCupomAplicado(codigo);
+      setDesconto(10);
+      Alert.alert('Cupom aplicado!', 'Você ganhou R$ 10,00 de desconto.');
+    } else if (codigo === 'FRETEGRATIS') {
+      setCupomAplicado(codigo);
+      setDesconto(0);
+      Alert.alert('Cupom aplicado!', 'Sua taxa de entrega agora é grátis!');
+    } else {
+      Alert.alert('Cupom inválido', 'Tente PRIMEIRA15, BURGER10 ou FRETEGRATIS.');
+    }
+  };
+
+  const handleRemoverCupom = () => {
+    setCupomAplicado(null);
+    setDesconto(0);
+    setCodigoCupom('');
+  };
 
   const handleFinalizarPedido = () => {
     if (itens.length === 0) {
@@ -85,6 +123,44 @@ export default function PagamentoScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Seção de Cupom de Desconto */}
+        <View style={styles.secao}>
+          <View style={styles.cupomHeader}>
+            <Text style={styles.secaoTitulo}>Cupom de desconto</Text>
+            <TouchableOpacity onPress={() => router.push('/cupons')}>
+              <Text style={styles.verCuponsTexto}>Ver disponíveis</Text>
+            </TouchableOpacity>
+          </View>
+
+          {cupomAplicado ? (
+            <View style={styles.cupomAplicadoBox}>
+              <View style={styles.cupomAplicadoInfo}>
+                <Ionicons name="ticket" size={20} color={COLORS.primary} />
+                <Text style={styles.cupomAplicadoTexto}>
+                  Cupom <Text style={{ fontWeight: '800' }}>{cupomAplicado}</Text> ativo
+                </Text>
+              </View>
+              <TouchableOpacity onPress={handleRemoverCupom}>
+                <Text style={styles.removerTexto}>Remover</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.cupomInputLinha}>
+              <TextInput
+                style={styles.cupomInput}
+                placeholder="Ex: PRIMEIRA15"
+                placeholderTextColor={COLORS.textSecondary}
+                autoCapitalize="characters"
+                value={codigoCupom}
+                onChangeText={setCodigoCupom}
+              />
+              <TouchableOpacity style={styles.aplicarBotao} onPress={handleAplicarCupom}>
+                <Text style={styles.aplicarTexto}>Aplicar</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
         {/* Seleção de Forma de Pagamento */}
         <View style={styles.secao}>
           <Text style={styles.secaoTitulo}>Forma de pagamento</Text>
@@ -122,13 +198,27 @@ export default function PagamentoScreen() {
         <View style={styles.resumoCard}>
           <Text style={styles.secaoTitulo}>Resumo de valores</Text>
           <View style={styles.resumoLinha}>
-            <Text style={styles.resumoLabel}>Subtotal ({itens.length} {itens.length === 1 ? 'item' : 'itens'})</Text>
+            <Text style={styles.resumoLabel}>
+              Subtotal ({itens.length} {itens.length === 1 ? 'item' : 'itens'})
+            </Text>
             <Text style={styles.resumoValor}>R$ {subtotal.toFixed(2).replace('.', ',')}</Text>
           </View>
           <View style={styles.resumoLinha}>
             <Text style={styles.resumoLabel}>Taxa de entrega</Text>
-            <Text style={styles.resumoValor}>R$ {taxaEntrega.toFixed(2).replace('.', ',')}</Text>
+            <Text style={styles.resumoValor}>
+              {taxaEntrega === 0 && itens.length > 0
+                ? 'Grátis'
+                : `R$ ${taxaEntrega.toFixed(2).replace('.', ',')}`}
+            </Text>
           </View>
+          {desconto > 0 && (
+            <View style={styles.resumoLinha}>
+              <Text style={[styles.resumoLabel, { color: '#16A34A' }]}>Desconto do cupom</Text>
+              <Text style={[styles.resumoValor, { color: '#16A34A' }]}>
+                - R$ {desconto.toFixed(2).replace('.', ',')}
+              </Text>
+            </View>
+          )}
           <View style={[styles.resumoLinha, styles.totalLinha]}>
             <Text style={styles.totalLabel}>Total a pagar</Text>
             <Text style={styles.totalValor}>R$ {totalGeral.toFixed(2).replace('.', ',')}</Text>
@@ -226,6 +316,67 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   trocarTexto: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  cupomHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  verCuponsTexto: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  cupomInputLinha: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  cupomInput: {
+    flex: 1,
+    height: 46,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  aplicarBotao: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aplicarTexto: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  cupomAplicadoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFF9F9',
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+  },
+  cupomAplicadoInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cupomAplicadoTexto: {
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  removerTexto: {
     fontSize: 13,
     fontWeight: '700',
     color: COLORS.primary,
