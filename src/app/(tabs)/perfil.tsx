@@ -15,69 +15,74 @@ import { COLORS, RADIUS, SPACING } from '../../constants/theme';
 export default function PerfilScreen() {
   const router = useRouter();
 
-  const handleSair = () => {
-    Alert.alert(
-      'Sair da conta',
-      'Tem certeza que deseja encerrar sua sessão?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Sair',
-          style: 'destructive',
-          onPress: () => router.replace('/login'),
-        },
-      ]
-    );
-  };
-
   const opcoesMenu = [
     {
+      id: 'pedidos',
+      titulo: 'Meus Pedidos',
+      subtitulo: 'Histórico e acompanhamento em tempo real',
+      icone: 'receipt-outline' as const,
+      rota: '/(tabs)/pedidos' as const,
+    },
+    {
+      id: 'cupons',
+      titulo: 'Meus Cupons',
+      subtitulo: 'Descontos e entrega grátis disponíveis',
+      icone: 'ticket-outline' as const,
+      rota: '/cupons' as const,
+    },
+    {
       id: 'enderecos',
-      titulo: 'Meus Endereços',
-      subtitulo: 'Gerencie seus locais de entrega',
+      titulo: 'Endereços',
+      subtitulo: 'Gerencie seus locais de entrega via CEP',
       icone: 'location-outline' as const,
       rota: '/enderecos' as const,
     },
     {
-      id: 'pagamento',
-      titulo: 'Formas de Pagamento',
-      subtitulo: 'Cartões salvos e Pix',
-      icone: 'card-outline' as const,
-      rota: '/pagamento' as const,
-    },
-    {
       id: 'ajuda',
-      titulo: 'Ajuda e Suporte',
-      subtitulo: 'Dúvidas frequentes e atendimento',
+      titulo: 'Central de Ajuda',
+      subtitulo: 'Perguntas frequentes e suporte 24h',
       icone: 'help-circle-outline' as const,
       rota: '/ajuda' as const,
     },
   ];
 
+  const handleSair = () => {
+    Alert.alert('Sair da conta', 'Deseja realmente voltar para a tela de login?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Sair',
+        style: 'destructive',
+        onPress: () => router.replace('/login'),
+      },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Cabeçalho com Avatar e Dados do Usuário */}
-        <View style={styles.header}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Meu Perfil</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Cartão do Usuário */}
+        <View style={styles.usuarioCard}>
           <View style={styles.avatar}>
             <Ionicons name="person" size={32} color={COLORS.primary} />
           </View>
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>Usuário Delivery</Text>
-            <Text style={styles.userEmail}>usuario@email.com</Text>
+          <View style={styles.usuarioInfo}>
+            <Text style={styles.usuarioNome}>Cliente VIP</Text>
+            <Text style={styles.usuarioEmail}>cliente@deliveryapp.com</Text>
           </View>
         </View>
 
-        {/* Lista de Opções de Navegação */}
-        <View style={styles.menuContainer}>
-          <Text style={styles.secaoTitulo}>Minha Conta</Text>
-
+        {/* Lista de Navegação */}
+        <View style={styles.menuLista}>
           {opcoesMenu.map((item) => (
             <TouchableOpacity
               key={item.id}
               style={styles.menuItem}
               onPress={() => router.push(item.rota)}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
             >
               <View style={styles.menuIconeBox}>
                 <Ionicons name={item.icone} size={22} color={COLORS.primary} />
@@ -91,18 +96,11 @@ export default function PerfilScreen() {
           ))}
         </View>
 
-        {/* Botão de Logout */}
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={styles.sairBotao}
-            onPress={handleSair}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="log-out-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.sairTexto}>Sair da conta</Text>
-          </TouchableOpacity>
-          <Text style={styles.versaoTexto}>Versão 1.0.0</Text>
-        </View>
+        {/* Botão de Sair */}
+        <TouchableOpacity style={styles.sairBotao} onPress={handleSair} activeOpacity={0.8}>
+          <Ionicons name="log-out-outline" size={20} color={COLORS.primary} />
+          <Text style={styles.sairTexto}>Sair da conta</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -114,48 +112,23 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: COLORS.white,
-    padding: SPACING.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
-    gap: SPACING.md,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  userInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  userName: {
+  headerTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: COLORS.text,
   },
-  userEmail: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  menuContainer: {
+  content: {
     padding: SPACING.md,
-    gap: SPACING.sm,
+    gap: SPACING.lg,
   },
-  secaoTitulo: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    textTransform: 'uppercase',
-    marginBottom: 4,
-    marginLeft: 4,
-  },
-  menuItem: {
+  usuarioCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.white,
@@ -163,6 +136,42 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
+    gap: SPACING.md,
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  usuarioInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  usuarioNome: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  usuarioEmail: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+  menuLista: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
     gap: SPACING.md,
   },
   menuIconeBox: {
@@ -186,31 +195,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textSecondary,
   },
-  footer: {
-    padding: SPACING.md,
-    marginTop: SPACING.md,
-    alignItems: 'center',
-    gap: SPACING.md,
-  },
   sairBotao: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
-    paddingVertical: 14,
-    borderRadius: RADIUS.md,
     backgroundColor: COLORS.white,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: COLORS.border,
     gap: 8,
   },
   sairTexto: {
     fontSize: 15,
     fontWeight: '700',
     color: COLORS.primary,
-  },
-  versaoTexto: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
   },
 });
