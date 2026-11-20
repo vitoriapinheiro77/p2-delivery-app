@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
   Alert,
   ScrollView,
@@ -14,6 +15,30 @@ import { COLORS, RADIUS, SPACING } from '../../constants/theme';
 
 export default function PerfilScreen() {
   const router = useRouter();
+  const [usuario, setUsuario] = useState({
+    nome: 'Cliente VIP',
+    email: 'cliente@rangoja.com',
+  });
+
+  useFocusEffect(
+    useCallback(() => {
+      async function carregarUsuario() {
+        try {
+          const dadosSalvos = await AsyncStorage.getItem('@rangoja:usuario');
+          if (dadosSalvos) {
+            const parsed = JSON.parse(dadosSalvos);
+            setUsuario({
+              nome: parsed.nome || 'Cliente VIP',
+              email: parsed.email || 'cliente@rangoja.com',
+            });
+          }
+        } catch {
+          // Mantém os dados padrão em caso de erro
+        }
+      }
+      carregarUsuario();
+    }, [])
+  );
 
   const opcoesMenu = [
     {
@@ -52,7 +77,10 @@ export default function PerfilScreen() {
       {
         text: 'Sair',
         style: 'destructive',
-        onPress: () => router.replace('/login'),
+        onPress: async () => {
+          await AsyncStorage.removeItem('@rangoja:usuario');
+          router.replace('/login');
+        },
       },
     ]);
   };
@@ -70,8 +98,8 @@ export default function PerfilScreen() {
             <Ionicons name="person" size={32} color={COLORS.primary} />
           </View>
           <View style={styles.usuarioInfo}>
-            <Text style={styles.usuarioNome}>Cliente VIP</Text>
-            <Text style={styles.usuarioEmail}>cliente@deliveryapp.com</Text>
+            <Text style={styles.usuarioNome}>{usuario.nome}</Text>
+            <Text style={styles.usuarioEmail}>{usuario.email}</Text>
           </View>
         </View>
 
