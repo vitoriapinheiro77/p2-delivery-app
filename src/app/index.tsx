@@ -12,7 +12,7 @@ export default function WelcomeScreen() {
         <View style={styles.logoCircle}>
           <Ionicons name="fast-food" size={64} color={COLORS.primary} />
         </View>
-        <Text style={styles.brandName}>RangoJá</Text>
+        <Text style={styles.brandName}>IFOOD</Text>
         <Text style={styles.subtitle}>
           Matando a sua fome com entrega rápida e os melhores restaurantes da cidade.
         </Text>
