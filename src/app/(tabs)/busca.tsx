@@ -2,86 +2,168 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  FlatList,
-  Image,
-  SafeAreaView,
+  Alert,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { PRATOS, Prato } from '../../data/mockPratos';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, RADIUS, SPACING } from '../../constants/theme';
+import { useCart } from '../../context/CartContext';
+
+const CATEGORIAS = ['Todos', 'Lanches', 'Pizza', 'Japonesa', 'Doces'];
+
+const CATALOGO_BUSCA = [
+  {
+    id: 'bk-whopper',
+    nome: 'Whopper Duplo',
+    restaurante: 'Burger King',
+    categoria: 'Lanches',
+    preco: 34.9,
+    tempo: '25-35 min',
+  },
+  {
+    id: 'pz-calabresa',
+    nome: 'Pizza Calabresa Grande',
+    restaurante: 'Pizzaria Napoli',
+    categoria: 'Pizza',
+    preco: 49.9,
+    tempo: '35-45 min',
+  },
+  {
+    id: 'sh-combo',
+    nome: 'Combinado Salmão 20 peças',
+    restaurante: 'Sushi House',
+    categoria: 'Japonesa',
+    preco: 62.1,
+    tempo: '30-40 min',
+  },
+  {
+    id: 'dc-acai',
+    nome: 'Açaí Completo 500ml',
+    restaurante: 'Ponto do Açaí',
+    categoria: 'Doces',
+    preco: 22.5,
+    tempo: '15-25 min',
+  },
+  {
+    id: 'bk-smash',
+    nome: 'Smash Bacon Artesanal',
+    restaurante: 'Burger King',
+    categoria: 'Lanches',
+    preco: 28.0,
+    tempo: '20-30 min',
+  },
+];
 
 export default function BuscaScreen() {
   const router = useRouter();
-  const [termoBusca, setTermoBusca] = useState('');
+  const { adicionarAoCarrinho } = useCart();
+  const [termo, setTermo] = useState('');
+  const [categoriaAtiva, setCategoriaAtiva] = useState('Todos');
 
-  const resultados = PRATOS.filter(
-    (p) =>
-      p.nome.toLowerCase().includes(termoBusca.toLowerCase()) ||
-      p.restaurante.toLowerCase().includes(termoBusca.toLowerCase()) ||
-      p.categoria.toLowerCase().includes(termoBusca.toLowerCase())
-  );
+  const itensFiltrados = CATALOGO_BUSCA.filter((item) => {
+    const bateCategoria =
+      categoriaAtiva === 'Todos' || item.categoria === categoriaAtiva;
+    const bateTexto =
+      item.nome.toLowerCase().includes(termo.toLowerCase()) ||
+      item.restaurante.toLowerCase().includes(termo.toLowerCase());
+    return bateCategoria && bateTexto;
+  });
 
-  const renderItem = ({ item }: { item: Prato }) => (
-    <TouchableOpacity
-      style={styles.cardPrato}
-      activeOpacity={0.9}
-      onPress={() => router.push(`/produto/${item.id}` as any)}
-    >
-      <Image source={{ uri: item.imagem }} style={styles.imagemPrato} />
-      <View style={styles.infoPrato}>
-        <Text style={styles.nomePrato} numberOfLines={1}>{item.nome}</Text>
-        <Text style={styles.restaurantePrato} numberOfLines={1}>{item.restaurante}</Text>
-        <View style={styles.detalhesLinha}>
-          <Ionicons name="star" size={13} color={COLORS.warning} />
-          <Text style={styles.avaliacaoTexto}>{item.avaliacao}</Text>
-          <Text style={styles.ponto}>•</Text>
-          <Text style={styles.tempoTexto}>{item.tempoEntrega}</Text>
-        </View>
-        <Text style={styles.precoPrato}>R$ {item.preco.toFixed(2).replace('.', ',')}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const handleAdicionar = (item: (typeof CATALOGO_BUSCA)[0]) => {
+    adicionarAoCarrinho(
+      {
+        id: item.id,
+        nome: item.nome,
+        preco: item.preco,
+        restaurante: item.restaurante,
+      },
+      1
+    );
+    Alert.alert('Adicionado!', `${item.nome} foi para a sua sacola.`);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Barra de Pesquisa Superior */}
-      <View style={styles.header}>
-        <View style={styles.searchBarContainer}>
-          <Ionicons name="search" size={20} color={COLORS.textSecondary} />
+      {/* Barra de Pesquisa */}
+      <View style={styles.searchHeader}>
+        <View style={styles.searchBox}>
+          <Ionicons name="search" size={20} color={COLORS.primary} />
           <TextInput
-            style={styles.inputBusca}
-            placeholder="Prato, restaurante ou categoria"
+            style={styles.searchInput}
+            placeholder="Buscar prato ou restaurante..."
             placeholderTextColor={COLORS.textSecondary}
-            value={termoBusca}
-            onChangeText={setTermoBusca}
-            autoFocus
+            value={termo}
+            onChangeText={setTermo}
           />
-          {termoBusca.length > 0 && (
-            <TouchableOpacity onPress={() => setTermoBusca('')}>
+          {termo.length > 0 && (
+            <TouchableOpacity onPress={() => setTermo('')}>
               <Ionicons name="close-circle" size={18} color={COLORS.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* Lista de Resultados */}
-      <FlatList
-        data={resultados}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listaContainer}
-        ListEmptyComponent={
-          <View style={styles.vazioContainer}>
-            <Ionicons name="search-outline" size={64} color={COLORS.border} />
-            <Text style={styles.vazioTitulo}>Nenhum resultado encontrado</Text>
-            <Text style={styles.vazioSub}>Tente buscar por "Burger", "Pizza" ou "Japonesa"</Text>
-          </View>
-        }
-      />
+      {/* Filtro de Categorias */}
+      <View style={styles.categoriasWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoriasLista}
+        >
+          {CATEGORIAS.map((cat) => {
+            const ativa = categoriaAtiva === cat;
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.chip, ativa && styles.chipAtivo]}
+                onPress={() => setCategoriaAtiva(cat)}
+              >
+                <Text style={[styles.chipTexto, ativa && styles.chipTextoAtivo]}>
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Resultados */}
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.resultadosCount}>
+          {itensFiltrados.length}{' '}
+          {itensFiltrados.length === 1 ? 'resultado encontrado' : 'resultados encontrados'}
+        </Text>
+
+        {itensFiltrados.map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            style={styles.cardItem}
+            onPress={() => router.push(`/produto/${item.id}`)}
+            activeOpacity={0.85}
+          >
+            <View style={styles.itemInfo}>
+              <Text style={styles.itemCategoria}>{item.categoria} • {item.tempo}</Text>
+              <Text style={styles.itemNome}>{item.nome}</Text>
+              <Text style={styles.itemRestaurante}>{item.restaurante}</Text>
+              <Text style={styles.itemPreco}>
+                R$ {item.preco.toFixed(2).replace('.', ',')}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.addBotao}
+              onPress={() => handleAdicionar(item)}
+            >
+              <Ionicons name="add" size={22} color={COLORS.white} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -91,108 +173,109 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
+  searchHeader: {
+    backgroundColor: COLORS.white,
+    padding: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.md,
+    height: 46,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  categoriasWrapper: {
+    backgroundColor: COLORS.white,
     paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  searchBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
+  categoriasLista: {
     paddingHorizontal: SPACING.md,
-    paddingVertical: 10,
-    borderRadius: RADIUS.md,
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.background,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  chipAtivo: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  chipTexto: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
+  chipTextoAtivo: {
+    color: COLORS.white,
+  },
+  content: {
+    padding: SPACING.md,
     gap: SPACING.sm,
   },
-  inputBusca: {
-    flex: 1,
-    fontSize: 15,
-    color: COLORS.text,
-    padding: 0,
-  },
-  listaContainer: {
-    padding: SPACING.md,
-    gap: SPACING.md,
-    flexGrow: 1,
-  },
-  cardPrato: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    overflow: 'hidden',
-    padding: SPACING.sm,
-    alignItems: 'center',
-  },
-  imagemPrato: {
-    width: 75,
-    height: 75,
-    borderRadius: RADIUS.sm,
-    backgroundColor: COLORS.surface,
-  },
-  infoPrato: {
-    flex: 1,
-    marginLeft: SPACING.md,
-    justifyContent: 'center',
-  },
-  nomePrato: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 2,
-  },
-  restaurantePrato: {
+  resultadosCount: {
     fontSize: 13,
+    fontWeight: '700',
     color: COLORS.textSecondary,
     marginBottom: 4,
   },
-  detalhesLinha: {
+  cardItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    backgroundColor: COLORS.white,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: SPACING.md,
+  },
+  itemInfo: {
+    flex: 1,
     gap: 3,
   },
-  avaliacaoTexto: {
-    fontSize: 12,
+  itemCategoria: {
+    fontSize: 11,
     fontWeight: '700',
-    color: COLORS.text,
-    marginLeft: 2,
-  },
-  ponto: {
-    marginHorizontal: 4,
-    color: COLORS.textSecondary,
-    fontSize: 10,
-  },
-  tempoTexto: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-  },
-  precoPrato: {
-    fontSize: 14,
-    fontWeight: '800',
     color: COLORS.primary,
+    textTransform: 'uppercase',
   },
-  vazioContainer: {
-    flex: 1,
+  itemNome: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  itemRestaurante: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+  itemPreco: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginTop: 4,
+  },
+  addBotao: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
-    gap: SPACING.sm,
-  },
-  vazioTitulo: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  vazioSub: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    paddingHorizontal: SPACING.lg,
   },
 });
